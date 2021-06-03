@@ -25,13 +25,11 @@ def chunk(l, n):
 
 def update_addresses(addresses):
     for address in addresses:
-        print(address)
         update_address(address)
 
 def reverse_lookup(ip):
     try:
         hostname, _, _ = socket.gethostbyaddr(ip)
-        print(hostname)
         return hostname
     except socket.herror:
         return None
@@ -69,13 +67,11 @@ def update_address(address):
             # Lets just go to the next one
             print(e)
 
-for prefix in prefixes:
-    addresses = nb.ipam.ip_addresses.filter(parent=str(prefix)) # Have to cast to str as prefix is of type Prefix
-    addresses = list(addresses)
-    chunks = chunk(addresses, config.NUM_PROCS) # split address pool into chunks, the number of chunks equaling the number of processes we're about to spawn
-    print(chunks)
-    if len(chunks) > 0:
-        for i in range(config.NUM_PROCS):
-            if len(chunks[i]) > 0: # Check we actually have an address in this chunk, if not, don't fire up a wasted process for it
-                p = multiprocessing.Process(target=update_addresses, args=(chunks[i],))
-                p.start() # actually spawn the process
+addresses = nb.ipam.ip_addresses.all()
+addresses = list(addresses)
+chunks = chunk(addresses, config.NUM_PROCS) # split address pool into chunks, the number of chunks equaling the number of processes we're about to spawn
+if len(chunks) > 0:
+    for i in range(config.NUM_PROCS):
+        if len(chunks[i]) > 0: # Check we actually have an address in this chunk, if not, don't fire up a wasted process for it
+            p = multiprocessing.Process(target=update_addresses, args=(chunks[i],))
+            p.start() # actually spawn the process
