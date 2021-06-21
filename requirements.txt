@@ -1,3 +1,4 @@
 pynetbox
 requests
 icmplib
+python-ipy
