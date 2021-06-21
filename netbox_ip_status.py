@@ -59,7 +59,9 @@ def update_address(ipy_address):
                     #lastseen = datetime.datetime.strptime("2021-01-01", '%Y-%m-%d')
                     delta = today_datetime - lastseen
                     delta = delta.days
-                    if delta == 1:
+                    if delta == 0:
+                        address.tags.append({"name": "lastseen:today"})
+                    elif delta == 1:
                         address.tags.append({"name": "lastseen:yesterday"})
                     elif delta > 1 and delta < 8:
                         address.tags.append({"name": "lastseen:week"})
