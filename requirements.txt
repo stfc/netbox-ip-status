@@ -1,4 +1,4 @@
 pynetbox
 requests
-icmplib
-python-ipy
+icmplib==2.1.1
+IPy

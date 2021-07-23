@@ -8,7 +8,7 @@ import socket
 from IPy import IP
 
 netbox_session = requests.Session()
-netbox_session.verify = False
+netbox_session.verify = config.CA_CERTS_LOCATION
 nb = pynetbox.api(
     config.NETBOX_URL,
     token=config.API_KEY,
@@ -20,9 +20,6 @@ prefixes = nb.ipam.prefixes.filter(tag=[config.PREFIX_TAG])
 
 today_datetime = datetime.datetime.now()
 today = today_datetime.strftime('%Y-%m-%d')
-
-def chunk(l, n):
-    return list(l[i::n] for i in range(n))
 
 def update_addresses(addresses):
     for address in addresses:
@@ -37,9 +34,8 @@ def reverse_lookup(ip):
 
 def update_address(ipy_address):
     ip = ipy_address.strNormal()
-    print(ip)
     try:
-        ping_result = ping(ip)
+        ping_result = ping(address=ip, timeout=1, interval=0.5, count=2)
         rev = reverse_lookup(ip)
         address = nb.ipam.ip_addresses.get(address=ipy_address.strNormal(1) + "/32")
         if address is not None:
@@ -76,6 +72,7 @@ def update_address(ipy_address):
                     address.tags.append({"name": "lastseen:never"})
             address.save()
         elif ping_result.is_alive:
+            print(ip + " -> " + str(ping_result.is_alive))
             # The address does not currently exist in Netbox, so lets add a reservation so somebody does not re-use it.
             new_address = {
                 "address": ipy_address.strNormal(1) + "/32",
@@ -97,9 +94,4 @@ def update_address(ipy_address):
 
 for prefix in prefixes:
     prefix_ip_object = IP(prefix.prefix)
-    chunks = chunk(prefix_ip_object, config.NUM_PROCS) # split address pool into chunks, the number of chunks equaling the number of processes we're about to spawn
-    if len(chunks) > 0:
-        for i in range(config.NUM_PROCS):
-            if len(chunks[i]) > 0: # Check we actually have an address in this chunk, if not, don't fire up a wasted process for it
-                p = multiprocessing.Process(target=update_addresses, args=(chunks[i],))
-                p.start() # actually spawn the process
+    update_addresses(prefix_ip_object)
