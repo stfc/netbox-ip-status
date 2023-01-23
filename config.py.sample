@@ -1,5 +1,5 @@
 API_KEY = "api key goes here"
 NUM_PROCS = 6
 NETBOX_URL = "https://netbox.example.ac.uk"
-CA_CERTS_LOCATION = "/etc/grid-security/certificates/"
 PREFIX_TAG = "scanrig"
+LAST_SEEN_DATABASE = "db.pickle"
