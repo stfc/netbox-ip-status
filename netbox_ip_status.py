@@ -7,6 +7,7 @@ import socket
 from IPy import IP
 import os
 import pickle
+import sys
 
 netbox_session = requests.Session()
 nb = pynetbox.api(
@@ -38,7 +39,7 @@ def update_address(ipy_address, prefix_mask):
     ip = ipy_address.strNormal()
     updated = False
     try:
-        ping_result = ping(address=ip, timeout=1, interval=0.5, count=2)
+        ping_result = ping(address=ip, timeout=0.5, interval=1, count=3)
         rev = reverse_lookup(ip)
         address = nb.ipam.ip_addresses.get(address=ipy_address.strNormal(1))
         if address is not None:
@@ -76,8 +77,11 @@ def update_address(ipy_address, prefix_mask):
                     updated = True
             
             for tag in address.tags:
-                if ("lastseen" in tag.display) and (tag.display != new_tag["name"]):
-                    print("DIFFTAGS")
+                if tag.name.startswith("lastseen") and (tag.name != new_tag["name"]):
+                    print("##")
+                    print(str(address) + " " + tag.name + " " + new_tag["name"])
+                    print(list(address.tags))
+                    print("##")
                     address.tags.remove(tag)
                     address.tags.append(new_tag)
                     updated = True
@@ -89,7 +93,7 @@ def update_address(ipy_address, prefix_mask):
             print(ip + " -> " + str(ping_result.is_alive))
             # The address does not currently exist in Netbox, so lets add a reservation so somebody does not re-use it.
             new_address = {
-                "address": ipy_address.strNormal(1) + prefix_mask,
+                "address": ipy_address.strNormal(1) + "/" + prefix_mask,
                 "tags": [
                     {"name": "found"},
                     {"name": "lastseen:today"}
@@ -104,6 +108,9 @@ def update_address(ipy_address, prefix_mask):
     except ValueError as e:
         # Lets just go to the next one
         print(e)
+
+if socket.getfqdn() != config.PROD_HOSTNAME:
+    sys.exit(0)
 
 if os.path.exists(config.LAST_SEEN_DATABASE):
     try:
