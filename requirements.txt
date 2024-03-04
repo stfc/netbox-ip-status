@@ -2,3 +2,4 @@ pynetbox
 requests
 icmplib==2.1.1
 IPy
+python_dotenv

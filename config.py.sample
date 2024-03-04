@@ -1,7 +1,0 @@
-API_KEY = "api key goes here"
-NUM_PROCS = 6
-NETBOX_URL = "https://netbox.example.ac.uk"
-PREFIX_TAG = "scanrig"
-LAST_SEEN_DATABASE = "db.pickle"
-# The hostname the scanner is running from
-PROD_HOSTNAME = "scanner.example.ac.uk"
