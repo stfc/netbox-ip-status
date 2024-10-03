@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+""" Script to tag IPs in NetBox with when they were last pingable """
+
 import config
 import datetime
 import os
