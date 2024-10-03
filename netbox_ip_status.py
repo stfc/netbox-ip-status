@@ -1,13 +1,15 @@
 import config
-import pynetbox
-import requests
-from icmplib import ping
 import datetime
-import socket
-from IPy import IP
 import os
 import pickle
+import socket
 import sys
+
+from icmplib import ping
+from IPy import IP
+import requests
+
+import pynetbox
 
 netbox_session = requests.Session()
 nb = pynetbox.api(
