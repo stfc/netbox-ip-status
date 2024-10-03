@@ -64,11 +64,11 @@ def update_address(ipy_address, prefix_mask):
                         new_tag = {"name": "lastseen:today"}
                     elif delta == 1:
                         new_tag = {"name": "lastseen:yesterday"}
-                    elif delta > 1 and delta < 8:
+                    elif 2 <= delta < 8:
                         new_tag = {"name": "lastseen:week"}
-                    elif delta > 7 and delta < 32:
+                    elif 8 <= delta < 32:
                         new_tag = {"name": "lastseen:month"}
-                    elif delta > 31 and delta < 366:
+                    elif 32 <= delta < 366:
                         new_tag = {"name": "lastseen:year"}
                     else:
                         new_tag = {"name": "lastseen:overayear"}
