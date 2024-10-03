@@ -1,13 +1,19 @@
+#!/usr/bin/env python3
+
+""" Script to tag IPs in NetBox with when they were last pingable """
+
 import config
-import pynetbox
-import requests
-from icmplib import ping
 import datetime
-import socket
-from IPy import IP
 import os
 import pickle
+import socket
 import sys
+
+from icmplib import ping
+from IPy import IP
+import requests
+
+import pynetbox
 
 netbox_session = requests.Session()
 nb = pynetbox.api(
@@ -58,24 +64,24 @@ def update_address(ipy_address, prefix_mask):
                         new_tag = {"name": "lastseen:today"}
                     elif delta == 1:
                         new_tag = {"name": "lastseen:yesterday"}
-                    elif delta > 1 and delta < 8:
+                    elif 2 <= delta < 8:
                         new_tag = {"name": "lastseen:week"}
-                    elif delta > 7 and delta < 32:
+                    elif 8 <= delta < 32:
                         new_tag = {"name": "lastseen:month"}
-                    elif delta > 31 and delta < 366:
+                    elif 32 <= delta < 366:
                         new_tag = {"name": "lastseen:year"}
                     else:
                         new_tag = {"name": "lastseen:overayear"}
                 else:
                     # Last seen is none, and we haven't been able to see it today either!
                     new_tag = {"name": "lastseen:never"}
-            
+
             # Only update reverse DNS if it changes
             if rev is not None:
                 if address.dns_name != rev:
                     address.dns_name = rev
                     updated = True
-            
+
             for tag in address.tags:
                 if tag.name.startswith("lastseen") and (tag.name != new_tag["name"]):
                     print("##")
@@ -85,7 +91,7 @@ def update_address(ipy_address, prefix_mask):
                     address.tags.remove(tag)
                     address.tags.append(new_tag)
                     updated = True
-            
+
             if updated:
                 address.save()
 
@@ -109,18 +115,22 @@ def update_address(ipy_address, prefix_mask):
         # Lets just go to the next one
         print(e)
 
-if socket.getfqdn() != config.PROD_HOSTNAME:
-    sys.exit(0)
+def main():
+    if socket.getfqdn() != config.PROD_HOSTNAME:
+        sys.exit(0)
 
-if os.path.exists(config.LAST_SEEN_DATABASE):
-    try:
-        last_seen = pickle.load(open(config.LAST_SEEN_DATABASE, "rb"))
-    except Exception:
-        pass
+    if os.path.exists(config.LAST_SEEN_DATABASE):
+        try:
+            last_seen = pickle.load(open(config.LAST_SEEN_DATABASE, "rb"))
+        except Exception:
+            pass
 
-for prefix in prefixes:
-    prefix_ip_object = IP(prefix.prefix)
-    prefix_mask = prefix.prefix.split("/")[1]
-    update_addresses(prefix_ip_object, prefix_mask)
+    for prefix in prefixes:
+        prefix_ip_object = IP(prefix.prefix)
+        prefix_mask = prefix.prefix.split("/")[1]
+        update_addresses(prefix_ip_object, prefix_mask)
 
-pickle.dump(last_seen, open(config.LAST_SEEN_DATABASE, "wb"))
+    pickle.dump(last_seen, open(config.LAST_SEEN_DATABASE, "wb"))
+
+if __name__ == "__main__":
+    main()
