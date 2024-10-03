@@ -71,13 +71,13 @@ def update_address(ipy_address, prefix_mask):
                 else:
                     # Last seen is none, and we haven't been able to see it today either!
                     new_tag = {"name": "lastseen:never"}
-            
+
             # Only update reverse DNS if it changes
             if rev is not None:
                 if address.dns_name != rev:
                     address.dns_name = rev
                     updated = True
-            
+
             for tag in address.tags:
                 if tag.name.startswith("lastseen") and (tag.name != new_tag["name"]):
                     print("##")
@@ -87,7 +87,7 @@ def update_address(ipy_address, prefix_mask):
                     address.tags.remove(tag)
                     address.tags.append(new_tag)
                     updated = True
-            
+
             if updated:
                 address.save()
 
