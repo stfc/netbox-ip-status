@@ -115,18 +115,22 @@ def update_address(ipy_address, prefix_mask):
         # Lets just go to the next one
         print(e)
 
-if socket.getfqdn() != config.PROD_HOSTNAME:
-    sys.exit(0)
+def main():
+    if socket.getfqdn() != config.PROD_HOSTNAME:
+        sys.exit(0)
 
-if os.path.exists(config.LAST_SEEN_DATABASE):
-    try:
-        last_seen = pickle.load(open(config.LAST_SEEN_DATABASE, "rb"))
-    except Exception:
-        pass
+    if os.path.exists(config.LAST_SEEN_DATABASE):
+        try:
+            last_seen = pickle.load(open(config.LAST_SEEN_DATABASE, "rb"))
+        except Exception:
+            pass
 
-for prefix in prefixes:
-    prefix_ip_object = IP(prefix.prefix)
-    prefix_mask = prefix.prefix.split("/")[1]
-    update_addresses(prefix_ip_object, prefix_mask)
+    for prefix in prefixes:
+        prefix_ip_object = IP(prefix.prefix)
+        prefix_mask = prefix.prefix.split("/")[1]
+        update_addresses(prefix_ip_object, prefix_mask)
 
-pickle.dump(last_seen, open(config.LAST_SEEN_DATABASE, "wb"))
+    pickle.dump(last_seen, open(config.LAST_SEEN_DATABASE, "wb"))
+
+if __name__ == "__main__":
+    main()
