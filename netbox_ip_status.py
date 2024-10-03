@@ -2,7 +2,7 @@
 
 """ Script to tag IPs in NetBox with when they were last pingable """
 
-import config
+from configparser import ConfigParser
 import datetime
 import os
 import pickle
@@ -120,12 +120,17 @@ def update_address(ipy_address, prefix_mask):
 
 
 def main():
-    if socket.getfqdn() != config.PROD_HOSTNAME:
+    global last_seen
+
+    config = ConfigParser()
+    config.read(['netbox_ip_status.cfg.default', 'netbox_ip_status.cfg'])
+
+    if socket.getfqdn() != config['SCANNER']['PROD_HOSTNAME']:
         sys.exit(0)
 
-    if os.path.exists(config.LAST_SEEN_DATABASE):
+    if os.path.exists(config['SCANNER']['LAST_SEEN_DATABASE']):
         try:
-            last_seen = pickle.load(open(config.LAST_SEEN_DATABASE, "rb"))
+            last_seen = pickle.load(open(config['SCANNER']['LAST_SEEN_DATABASE'], "rb"))
         except Exception:
             pass
 
@@ -134,7 +139,7 @@ def main():
         prefix_mask = prefix.prefix.split("/")[1]
         update_addresses(prefix_ip_object, prefix_mask)
 
-    pickle.dump(last_seen, open(config.LAST_SEEN_DATABASE, "wb"))
+    pickle.dump(last_seen, open(config['SCANNER']['LAST_SEEN_DATABASE'], "wb"))
 
 
 if __name__ == "__main__":

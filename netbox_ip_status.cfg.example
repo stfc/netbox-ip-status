@@ -1,0 +1,9 @@
+[NETBOX]
+API_KEY = api key goes here
+URL = https://netbox.example.org
+PREFIX_TAG = scanme
+
+[SCANNER]
+LAST_SEEN_DATABASE = db.pickle
+# The hostname the scanner is running from
+PROD_HOSTNAME = scanner.example.org
