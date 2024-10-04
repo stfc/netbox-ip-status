@@ -33,6 +33,64 @@ def reverse_lookup(ip):
         return None
 
 
+def generate_tag(address, ping_result):
+    if ping_result.is_alive:
+        last_seen[str(address)] = today
+        return {"name": "lastseen:today"}
+
+    if str(address) in last_seen.keys():
+        last_seen_date = datetime.datetime.strptime(last_seen[str(address)], '%Y-%m-%d')
+        delta = today_datetime - last_seen_date
+        delta = delta.days
+        tag = {"name": "lastseen:overayear"}
+
+        if delta == 0:
+            tag =  {"name": "lastseen:today"}
+        elif delta == 1:
+            tag =  {"name": "lastseen:yesterday"}
+        elif 2 <= delta < 8:
+            tag =  {"name": "lastseen:week"}
+        elif 8 <= delta < 32:
+            tag =  {"name": "lastseen:month"}
+        elif 32 <= delta < 366:
+            tag =  {"name": "lastseen:year"}
+
+        return tag
+
+    # Last seen is none, and we haven't been able to see it today either!
+    return {"name": "lastseen:never"}
+
+
+def update_tag(address, new_tag):
+    updated = False
+    for tag in address.tags:
+        if tag.name.startswith("lastseen") and (tag.name != new_tag["name"]):
+            print("##")
+            print(str(address) + " " + tag.name + " " + new_tag["name"])
+            print(list(address.tags))
+            print("##")
+            address.tags.remove(tag)
+            address.tags.append(new_tag)
+            updated = True
+    return updated
+
+
+def add_address(netbox, ipy_address, prefix_mask, rev):
+    new_address = {
+        "address": ipy_address.strNormal(1) + "/" + prefix_mask,
+        "tags": [
+            {"name": "found"},
+            {"name": "lastseen:today"}
+        ],
+        "status": "reserved",
+    }
+    if rev is not None:
+        new_address["dns_name"] = rev
+    netbox.ipam.ip_addresses.create(new_address)
+    address = netbox.ipam.ip_addresses.get(address=ipy_address.strNormal(1))
+    last_seen[str(address)] = today
+
+
 def ping_address(netbox, ipy_address, prefix_mask):
     ip = ipy_address.strNormal()
     updated = False
@@ -41,32 +99,6 @@ def ping_address(netbox, ipy_address, prefix_mask):
         rev = reverse_lookup(ip)
         address = netbox.ipam.ip_addresses.get(address=ipy_address.strNormal(1))
         if address is not None:
-            new_tag = None
-
-            if ping_result.is_alive:
-                last_seen[str(address)] = today
-                new_tag = {"name": "lastseen:today"}
-            else:
-                if str(address) in last_seen.keys():
-                    last_seen_date = datetime.datetime.strptime(last_seen[str(address)], '%Y-%m-%d')
-                    #lastseen = datetime.datetime.strptime("2021-01-01", '%Y-%m-%d')
-                    delta = today_datetime - last_seen_date
-                    delta = delta.days
-                    if delta == 0:
-                        new_tag = {"name": "lastseen:today"}
-                    elif delta == 1:
-                        new_tag = {"name": "lastseen:yesterday"}
-                    elif 2 <= delta < 8:
-                        new_tag = {"name": "lastseen:week"}
-                    elif 8 <= delta < 32:
-                        new_tag = {"name": "lastseen:month"}
-                    elif 32 <= delta < 366:
-                        new_tag = {"name": "lastseen:year"}
-                    else:
-                        new_tag = {"name": "lastseen:overayear"}
-                else:
-                    # Last seen is none, and we haven't been able to see it today either!
-                    new_tag = {"name": "lastseen:never"}
 
             # Only update reverse DNS if it changes
             if rev is not None:
@@ -74,15 +106,8 @@ def ping_address(netbox, ipy_address, prefix_mask):
                     address.dns_name = rev
                     updated = True
 
-            for tag in address.tags:
-                if tag.name.startswith("lastseen") and (tag.name != new_tag["name"]):
-                    print("##")
-                    print(str(address) + " " + tag.name + " " + new_tag["name"])
-                    print(list(address.tags))
-                    print("##")
-                    address.tags.remove(tag)
-                    address.tags.append(new_tag)
-                    updated = True
+            new_tag = generate_tag(address, ping_result)
+            updated |= update_tag(address, new_tag)
 
             if updated:
                 address.save()
@@ -90,19 +115,8 @@ def ping_address(netbox, ipy_address, prefix_mask):
         elif ping_result.is_alive:
             print(ip + " -> " + str(ping_result.is_alive))
             # The address does not currently exist in Netbox, so lets add a reservation so somebody does not re-use it.
-            new_address = {
-                "address": ipy_address.strNormal(1) + "/" + prefix_mask,
-                "tags": [
-                    {"name": "found"},
-                    {"name": "lastseen:today"}
-                ],
-                "status": "reserved",
-            }
-            if rev is not None:
-                new_address["dns_name"] = rev
-            netbox.ipam.ip_addresses.create(new_address)
-            address = netbox.ipam.ip_addresses.get(address=ipy_address.strNormal(1))
-            last_seen[str(address)] = today
+            add_address(netbox, ipy_address, prefix_mask, rev)
+
     except ValueError as e:
         # Lets just go to the next one
         print(e)
