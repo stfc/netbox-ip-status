@@ -108,30 +108,29 @@ def process_address(netbox, ipy_address, prefix_mask, is_alive):
     ip = ipy_address.strNormal()
     rev_updated = False
     tag_updated = False
-    try:
-        rev = reverse_lookup(ip)
-        logger.debug("reverse DNS is %s", rev)
-        address = netbox.ipam.ip_addresses.get(address=ipy_address.strNormal(1))
-        if address is not None:
-            new_tag = generate_tag(address, is_alive)
-            address, tag_updated = update_tag(address, new_tag)
 
-            # Only update reverse DNS if it changes
-            if rev is not None:
-                if address.dns_name != rev:
-                    address.dns_name = rev
-                    rev_updated = True
+    rev = reverse_lookup(ip)
+    logger.debug("reverse DNS is %s", rev)
+
+    address = netbox.ipam.ip_addresses.get(address=ipy_address.strNormal(1))
+
+    if address is not None:
+        new_tag = generate_tag(address, is_alive)
+        address, tag_updated = update_tag(address, new_tag)
+
+        # Only update reverse DNS if it changes
+        if rev is not None:
+            if address.dns_name != rev:
+                address.dns_name = rev
+                rev_updated = True
 
         if rev_updated or tag_updated:
             address.save()
 
-        elif is_alive:
-            # The address does not currently exist in Netbox, so lets add a reservation so somebody does not re-use it.
-            add_address(netbox, ipy_address, prefix_mask, rev)
+    elif is_alive:
+        # The address does not currently exist in Netbox, so lets add a reservation so somebody does not re-use it.
+        add_address(netbox, ipy_address, prefix_mask, rev)
 
-    except ValueError as e:
-        # Lets just go to the next one
-        print(e)
 
 
 def main():
