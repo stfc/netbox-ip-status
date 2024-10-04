@@ -30,9 +30,11 @@ today = today_datetime.strftime('%Y-%m-%d')
 
 last_seen = {}
 
+
 def update_addresses(addresses, prefix_mask):
     for address in addresses:
         update_address(address, prefix_mask)
+
 
 def reverse_lookup(ip):
     try:
@@ -40,6 +42,7 @@ def reverse_lookup(ip):
         return hostname
     except socket.herror:
         return None
+
 
 def update_address(ipy_address, prefix_mask):
     ip = ipy_address.strNormal()
@@ -115,6 +118,7 @@ def update_address(ipy_address, prefix_mask):
         # Lets just go to the next one
         print(e)
 
+
 def main():
     if socket.getfqdn() != config.PROD_HOSTNAME:
         sys.exit(0)
@@ -131,6 +135,7 @@ def main():
         update_addresses(prefix_ip_object, prefix_mask)
 
     pickle.dump(last_seen, open(config.LAST_SEEN_DATABASE, "wb"))
+
 
 if __name__ == "__main__":
     main()
