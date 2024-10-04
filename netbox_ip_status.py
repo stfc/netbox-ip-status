@@ -75,7 +75,7 @@ def update_tag(address, new_tag):
             address.tags.remove(tag)
             address.tags.append(new_tag)
             updated = True
-    return updated
+    return address, updated
 
 
 def add_address(netbox, ipy_address, prefix_mask, rev):
@@ -96,22 +96,23 @@ def add_address(netbox, ipy_address, prefix_mask, rev):
 
 def process_address(netbox, ipy_address, prefix_mask, is_alive):
     ip = ipy_address.strNormal()
-    updated = False
+    rev_updated = False
+    tag_updated = False
     try:
         rev = reverse_lookup(ip)
         address = netbox.ipam.ip_addresses.get(address=ipy_address.strNormal(1))
         if address is not None:
+            new_tag = generate_tag(address, is_alive)
+            address, tag_updated = update_tag(address, new_tag)
+
             # Only update reverse DNS if it changes
             if rev is not None:
                 if address.dns_name != rev:
                     address.dns_name = rev
-                    updated = True
+                    rev_updated = True
 
-            new_tag = generate_tag(address, is_alive)
-            updated |= update_tag(address, new_tag)
-
-            if updated:
-                address.save()
+        if rev_updated or tag_updated:
+            address.save()
 
         elif is_alive:
             print(f'{ip} -> {is_alive}')
