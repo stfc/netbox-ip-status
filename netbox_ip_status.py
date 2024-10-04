@@ -3,13 +3,13 @@
 """ Script to tag IPs in NetBox with when they were last pingable """
 
 from configparser import ConfigParser
+from subprocess import Popen, PIPE
 import datetime
 import os
 import pickle
 import socket
 import sys
 
-from icmplib import ping
 from IPy import IP
 import requests
 
@@ -21,8 +21,11 @@ last_seen = {}
 
 
 def ping_addresses(netbox, addresses, prefix_mask):
-    for address in addresses:
-        ping_address(netbox, address, prefix_mask)
+    with Popen(["fping", "-a", "-g", str(addresses)], stdout=PIPE, stderr=PIPE) as fping:
+        ips_alive = fping.communicate()[0].decode('utf8').splitlines()
+
+        for address in addresses:
+            process_address(netbox, address, prefix_mask, str(address) in ips_alive)
 
 
 def reverse_lookup(ip):
@@ -33,8 +36,8 @@ def reverse_lookup(ip):
         return None
 
 
-def generate_tag(address, ping_result):
-    if ping_result.is_alive:
+def generate_tag(address, is_alive):
+    if is_alive:
         last_seen[str(address)] = today
         return {"name": "lastseen:today"}
 
@@ -91,29 +94,27 @@ def add_address(netbox, ipy_address, prefix_mask, rev):
     last_seen[str(address)] = today
 
 
-def ping_address(netbox, ipy_address, prefix_mask):
+def process_address(netbox, ipy_address, prefix_mask, is_alive):
     ip = ipy_address.strNormal()
     updated = False
     try:
-        ping_result = ping(address=ip, timeout=0.5, interval=1, count=3)
         rev = reverse_lookup(ip)
         address = netbox.ipam.ip_addresses.get(address=ipy_address.strNormal(1))
         if address is not None:
-
             # Only update reverse DNS if it changes
             if rev is not None:
                 if address.dns_name != rev:
                     address.dns_name = rev
                     updated = True
 
-            new_tag = generate_tag(address, ping_result)
+            new_tag = generate_tag(address, is_alive)
             updated |= update_tag(address, new_tag)
 
             if updated:
                 address.save()
 
-        elif ping_result.is_alive:
-            print(ip + " -> " + str(ping_result.is_alive))
+        elif is_alive:
+            print(f'{ip} -> {is_alive}')
             # The address does not currently exist in Netbox, so lets add a reservation so somebody does not re-use it.
             add_address(netbox, ipy_address, prefix_mask, rev)
 
