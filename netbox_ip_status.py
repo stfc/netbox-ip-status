@@ -82,6 +82,10 @@ def update_tag(address, new_tag):
             address.tags.remove(tag)
             address.tags.append(new_tag)
             updated = True
+            break
+    else:
+        address.tags.append(new_tag)
+        updated = True
     logger.debug("Tags after: %s", address.tags)
     return address, updated
 
