@@ -4,3 +4,4 @@ PREFIX_TAG = scanme
 
 [SCANNER]
 LAST_SEEN_DATABASE = db.pickle
+LOG_LEVEL = INFO
