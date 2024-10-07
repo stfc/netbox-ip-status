@@ -2,7 +2,7 @@
 
 """ Script to tag IPs in NetBox with when they were last pingable """
 
-import config
+from configparser import ConfigParser
 import datetime
 import os
 import pickle
@@ -15,24 +15,15 @@ import requests
 
 import pynetbox
 
-netbox_session = requests.Session()
-nb = pynetbox.api(
-    config.NETBOX_URL,
-    token=config.API_KEY,
-    threading=True
-)
-nb.http_session = netbox_session
-
-prefixes = nb.ipam.prefixes.filter(tag=[config.PREFIX_TAG])
-
 today_datetime = datetime.datetime.now()
 today = today_datetime.strftime('%Y-%m-%d')
-
 last_seen = {}
 
-def update_addresses(addresses, prefix_mask):
+
+def ping_addresses(netbox, addresses, prefix_mask):
     for address in addresses:
-        update_address(address, prefix_mask)
+        ping_address(netbox, address, prefix_mask)
+
 
 def reverse_lookup(ip):
     try:
@@ -41,13 +32,14 @@ def reverse_lookup(ip):
     except socket.herror:
         return None
 
-def update_address(ipy_address, prefix_mask):
+
+def ping_address(netbox, ipy_address, prefix_mask):
     ip = ipy_address.strNormal()
     updated = False
     try:
         ping_result = ping(address=ip, timeout=0.5, interval=1, count=3)
         rev = reverse_lookup(ip)
-        address = nb.ipam.ip_addresses.get(address=ipy_address.strNormal(1))
+        address = netbox.ipam.ip_addresses.get(address=ipy_address.strNormal(1))
         if address is not None:
             new_tag = None
 
@@ -108,29 +100,46 @@ def update_address(ipy_address, prefix_mask):
             }
             if rev is not None:
                 new_address["dns_name"] = rev
-            nb.ipam.ip_addresses.create(new_address)
-            address = nb.ipam.ip_addresses.get(address=ipy_address.strNormal(1))
+            netbox.ipam.ip_addresses.create(new_address)
+            address = netbox.ipam.ip_addresses.get(address=ipy_address.strNormal(1))
             last_seen[str(address)] = today
     except ValueError as e:
         # Lets just go to the next one
         print(e)
 
+
 def main():
-    if socket.getfqdn() != config.PROD_HOSTNAME:
+    global last_seen
+
+    config = ConfigParser()
+    config.read(['netbox_ip_status.cfg.default', 'netbox_ip_status.cfg'])
+
+    netbox_session = requests.Session()
+    netbox = pynetbox.api(
+        config['NETBOX']['URL'],
+        token=config['NETBOX']['API_KEY'],
+        threading=True
+    )
+    netbox.http_session = netbox_session
+
+    prefixes = netbox.ipam.prefixes.filter(tag=[config['NETBOX']['PREFIX_TAG']])
+
+    if socket.getfqdn() != config['SCANNER']['PROD_HOSTNAME']:
         sys.exit(0)
 
-    if os.path.exists(config.LAST_SEEN_DATABASE):
+    if os.path.exists(config['SCANNER']['LAST_SEEN_DATABASE']):
         try:
-            last_seen = pickle.load(open(config.LAST_SEEN_DATABASE, "rb"))
+            last_seen = pickle.load(open(config['SCANNER']['LAST_SEEN_DATABASE'], "rb"))
         except Exception:
             pass
 
     for prefix in prefixes:
         prefix_ip_object = IP(prefix.prefix)
         prefix_mask = prefix.prefix.split("/")[1]
-        update_addresses(prefix_ip_object, prefix_mask)
+        ping_addresses(netbox, prefix_ip_object, prefix_mask)
 
-    pickle.dump(last_seen, open(config.LAST_SEEN_DATABASE, "wb"))
+    pickle.dump(last_seen, open(config['SCANNER']['LAST_SEEN_DATABASE'], "wb"))
+
 
 if __name__ == "__main__":
     main()

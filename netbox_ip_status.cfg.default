@@ -1,0 +1,6 @@
+[NETBOX]
+URL = https://localhost
+PREFIX_TAG = scanme
+
+[SCANNER]
+LAST_SEEN_DATABASE = db.pickle
