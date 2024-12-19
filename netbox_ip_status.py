@@ -73,19 +73,22 @@ def generate_tag(address, is_alive):
 
 
 def update_tag(address, new_tag):
-    logger.debug("Adding tag %s to %s", new_tag, address)
+    logger.debug("Updating tags on %s", address)
     logger.debug("Tags before: %s", address.tags)
     updated = False
     for tag in address.tags:
         logger.debug("Examining tag: %s", tag)
-        if tag.name.startswith("lastseen") and (tag.name != new_tag["name"]):
-            address.tags.remove(tag)
-            address.tags.append(new_tag)
-            updated = True
+        if tag.name.startswith("lastseen"):
+            if (tag.name != new_tag["name"]):
+                address.tags.remove(tag)
+                address.tags.append(new_tag)
+                updated = True
+                logger.debug("Replaced tag %s with %s", tag, new_tag)
             break
     else:
         address.tags.append(new_tag)
         updated = True
+        logger.debug("No existing tag found, added %s", new_tag)
     logger.debug("Tags after: %s", address.tags)
     return address, updated
 
